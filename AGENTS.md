@@ -1,224 +1,412 @@
-# AGENT.md
+# AGENTS.md
 
-## HL Sales & Receivables Management App — Coding Agent Instructions
+## HL Sales & Receivables Management App
 
-**Stack:** Nuxt 3 · Tailwind CSS · Supabase  
-**UI Language:** Bahasa Indonesia (all labels, messages, and copy in the app)  
-**Doc Language:** English (this file and all referenced docs)  
-**Single-user internal app. No multi-tenant. No PPN/tax. IDR only.**
+Modern coding agent instructions for building and maintaining the HL Sales & Receivables Management App.
 
-Read this file fully before writing any code. It is the authoritative source of truth. If this file conflicts with something in chat, this file wins.
+**Stack:** Nuxt 3, TypeScript, Tailwind CSS, Supabase  
+**UI language:** Bahasa Indonesia  
+**Documentation language:** English  
+**Business model:** Single-user internal app, no multi-tenant, no PPN/tax, IDR only
 
-# IMPORTANT NOTES : If my prompt is ambiguous, please make sure you ask or reconfirm with me.
-
----
-
-## 0. Quick Reference
-
-| Doc                | Contents                                                                |
-| ------------------ | ----------------------------------------------------------------------- |
-| `system-prompt.md` | use this as reference system prompt , avoid ai slops design             |
-| `SRS.md`           | All functional and non-functional requirements (AC-_._ numbered)        |
-| `PRD.md`           | Product scope, feature details, UX principles, page map                 |
-| `DESIGN.md`        | Visual system, components, Nuxt structure, Supabase patterns            |
-| `AGENT.md`         | This file. Coding rules, task protocol, anti-patterns                   |
-| `ANTI-SLOP.md`     | Writing style rules (apply when generating copy, comments, README text) |
-| `SKILL-lite.md`    | Compact version of writing rules                                        |
+This file is the main operating guide for AI coding agents. Read it before changing code. When this file conflicts with chat instructions, follow this file unless the project owner explicitly says otherwise.
 
 ---
 
-## 1. Non-Negotiable Rules
+## 1. Operating Principles
 
-These apply to every file, every function, every PR. No exceptions.
+Build the app like a real internal business tool, not a demo.
 
-### 1.1 Calculation Correctness
+1. **Make it easy for non-technical users.** End users may be unfamiliar with software, accounting terms, or complex dashboards. Use simple flows, clear labels, and safe defaults.
+2. **Protect accounting correctness.** Discount, omzet, laba, piutang, lunas, bonus, and ongkir rules must never be approximated.
+3. **Keep UI polished and purposeful.** Avoid generic AI-looking layouts, excessive gradients, meaningless icons, over-decorated cards, and vague empty states.
+4. **Prefer clarity over cleverness.** Code should be readable, typed, and predictable.
+5. **Ask only when ambiguity blocks correctness.** If the task is small and the expected behavior is clear from PRD/SRS/DESIGN, proceed.
+6. **Schema first, logic second, UI last.** Data correctness comes before screens.
 
-The cascading discount formula is:
+---
 
-```ts
-discounted_unit_price = base_price × ∏(1 − dᵢ/100)
+## 2. Source of Truth
+
+Use these documents together. Do not rely on chat memory alone.
+
+| File | Purpose |
+| --- | --- |
+| `AGENTS.md` | Agent workflow, rules, guardrails, coding protocol |
+| `PRD.md` | Product scope, users, goals, page map, UX behavior |
+| `SRS.md` | Functional and non-functional requirements, acceptance criteria |
+| `DESIGN.md` | Visual system, layout rules, components, interaction patterns |
+| `system-prompt.md` | Design and implementation mindset, anti AI-slop direction |
+| `ANTI-SLOP.md` | Writing style for UI copy, docs, comments, README text |
+| `SKILL-lite.md` | Compact writing and implementation reminders |
+| `.agents/skills/*/SKILL.md` | Specialized implementation instructions for agents |
+
+When implementing a feature:
+
+1. Read the related section in `PRD.md`.
+2. Confirm acceptance criteria in `SRS.md`.
+3. Match layout and components from `DESIGN.md`.
+4. Apply relevant `.agents/skills` before coding.
+5. Update types, tests, and docs when the behavior changes.
+
+---
+
+## 3. Required Agent Skills
+
+The project uses local skills stored in `.agents/skills`. Before coding, inspect the relevant skill and follow it.
+
+### 3.1 Hallmark Skill
+
+Use the Hallmark skill as the quality gate for product feel.
+
+Apply Hallmark whenever work touches:
+
+- Dashboard layout
+- Forms
+- Tables
+- Empty states
+- Toasts and validation messages
+- PDF export views
+- Customer-facing output
+- Any screen used by non-technical users
+
+Hallmark expectations:
+
+- The screen has one clear primary action.
+- The user can understand what to do in under 5 seconds.
+- Labels use familiar Indonesian words, not developer terms.
+- Important totals are visually prioritized.
+- Dangerous actions need confirmation and clear consequences.
+- Empty states explain what happened and what to do next.
+- The UI feels handmade and intentional, not generated.
+
+### 3.2 `.agents/skills` Usage Protocol
+
+Before making changes, check available skills:
+
+```bash
+ls .agents/skills
 ```
 
-`[20, 20, 10]` on base `100` = `100 × 0.8 × 0.8 × 0.9 = 57.6`.
+Then read the relevant `SKILL.md` file, for example:
 
-This is NOT `100 × (1 - 0.50) = 50`. Any code that sums discount steps before applying them is wrong. Fix it, don't work around it.
+```bash
+cat .agents/skills/hallmark/SKILL.md
+cat .agents/skills/design-system-generator/SKILL.md
+cat .agents/skills/nuxt/SKILL.md
+cat .agents/skills/supabase/SKILL.md
+```
 
-Isolate this logic in `composables/useDiscount.ts`. No inline discount calculation anywhere else in the app.
+If a skill exists for the task area, use it. If no exact skill exists, use the closest one and follow this `AGENTS.md` file as the final authority.
 
-### 1.2 Cash Basis
+### 3.3 Skill Application Checklist
 
-Omzet, Laba HL, and bonus accumulation count **only** for transactions where `status = 'lunas'`. Any query or aggregation that counts Piutang transactions in revenue figures is a bug.
+Before marking a task complete, mention which skills were applied in the final response:
 
-### 1.3 Harga Modal is Internal
+```md
+Applied skills:
+- Hallmark
+- Design System
+- Supabase
+```
 
-`harga_modal` and `line_laba_hl` are **never** shown in:
-
-- Customer-facing PDFs
-- Any UI element visible on the customer detail page's "download" output
-- Any tooltip or hover state that a customer could see if shown the screen
-
-They appear only in internal recap pages and the Bon detail (operator view).
-
-### 1.4 Soft-Delete Only
-
-Never hard-delete customers or products that have transaction history. Always use `deleted_at = now()`. Soft-deleted records:
-
-- Are excluded from all active dropdowns and pickers
-- Remain in all historical Bon data
-- Are excluded from new Bon creation selectors
-
-### 1.5 Nomor Bon Uniqueness
-
-`nomor_bon` has a UNIQUE constraint in the database. Also validate client-side on blur. Error message: "Nomor bon sudah digunakan."
-
-### 1.6 Ongkir is Pass-Through
-
-`ongkir` adds to the customer's total owed (Amount Owed = omzet + ongkir). It does NOT add to Laba HL, Omzet, or bonus accumulator.
-
-### 1.7 Atomic Batch Operations
-
-The "settle month" operation must update ALL qualifying transactions in a single database call (Supabase RPC / PL/pgSQL function). Do not loop over transactions in JS and settle one by one.
-
-### 1.8 Price Snapshots
-
-When a transaction line is created, store snapshots:
-
-- `harga_modal_snap` (copy of product's `harga_modal` at that moment)
-- `harga_base_snap` (copy of `harga_base`)
-- `discounted_price` (computed from snapshot + customer discounts at that moment)
-- `line_omzet`, `line_laba_hl` (computed and stored)
-
-This prevents retroactive calculation changes when product prices or customer discounts are edited later.
+Do not invent skills that do not exist in `.agents/skills`.
 
 ---
 
-## 2. Tech Stack Specifics
+## 4. Product UX Direction
 
-### 2.1 Nuxt 3
+This app is for daily sales and receivables work. It must feel calm, fast, and safe.
 
-- Use `<script setup lang="ts">` in all `.vue` files
-- Use Nuxt's auto-import for composables and components
-- Use `useFetch` or `useAsyncData` for server-side data fetching on pages
-- Use `$fetch` for client-side mutations (form submissions)
-- State management: Nuxt's built-in `useState` or Pinia for cross-page state (e.g., toast notifications, user session)
-- Route middleware in `middleware/auth.global.ts` for session protection
-- Server routes (`server/api/`) only when Supabase client-side is insufficient (rare)
+### 4.1 End User Profile
 
-### 2.2 Tailwind CSS
+Assume the user:
 
-- Config file at `tailwind.config.js`. The `brand`, `piutang`, `lunas`, `bonus` color tokens defined in `DESIGN.md §2.1` must be configured there before use.
-- No inline `style=""` attributes. All styling via Tailwind classes or CSS variables.
-- For component variants (e.g., StatusBadge in three colors), use a props-driven class map object, not conditional class strings scattered across the template.
-- `font-mono` for all IDR currency amounts in tables.
-- Responsive prefix order: mobile → `sm:` → `md:` → `lg:`
+- Wants to create Bon quickly.
+- May not understand technical database terms.
+- Needs clear difference between `Piutang` and `Lunas`.
+- Needs reassurance before settling or deleting data.
+- May use a small laptop or mobile device.
+- Prefers direct Indonesian copy.
 
-### 2.3 Supabase
+### 4.2 UX Rules
 
-- Use `@supabase/supabase-js` via the Nuxt Supabase module (`@nuxtjs/supabase`)
-- All table queries go through the typed Supabase client
-- RLS policies must be active on all tables. Development without RLS is not acceptable.
-- Use `.rpc()` for the `settle_month` function and any other multi-row atomic operations
-- Supabase Realtime: disabled for v1 (no subscriptions)
-- Environment variables: `SUPABASE_URL` and `SUPABASE_KEY` (anon key) in `.env`. Never commit keys.
+Use these rules on every screen:
 
-**Type generation:** Run `supabase gen types typescript` after any schema change and commit the result to `types/supabase.ts`.
+- Use Bahasa Indonesia for all visible UI text.
+- Use short labels: `Pelanggan`, `Produk`, `Bon`, `Piutang`, `Lunas`, `Bonus`.
+- Avoid raw database names in UI, such as `customer_id`, `line_omzet`, `deleted_at`.
+- Put primary action in the top-right on desktop and full-width sticky/action area on mobile when needed.
+- Show confirmation for destructive or bulk actions.
+- Format all money as IDR using `formatRp()`.
+- Show dates with `formatDate()` or `monthLabel()`.
+- Never show empty tables without explanation.
+- Use helpful microcopy below complex fields.
+- Keep forms grouped by user intent, not database table structure.
+
+### 4.3 Anti AI-Slop UI Rules
+
+Avoid:
+
+- Random glassmorphism, neon gradients, and meaningless background blobs.
+- Too many cards with the same visual weight.
+- Generic dashboard hero sections that do not help the task.
+- Placeholder copy like `Manage your data efficiently`.
+- Overuse of emoji or decorative icons.
+- Vague buttons like `Submit`, `Process`, `Continue` when a specific action exists.
+- Dense tables with no search, filter, or summary.
+
+Prefer:
+
+- Clear page title plus one-sentence context.
+- Strong hierarchy: summary first, detail second.
+- Compact tables with search and status filters.
+- Inline validation near the field.
+- Plain Indonesian messages.
+- Consistent spacing, rounded corners, borders, and shadows from `DESIGN.md`.
 
 ---
 
-## 3. Database Schema
+## 5. Non-Negotiable Business Rules
 
-Apply these as Supabase migrations. Keep migration files in `supabase/migrations/`.
+These rules apply to every PR. Violating them is a bug.
 
-### 3.1 Tables
+### 5.1 Cascading Discount Calculation
 
-# Important Notes : create a helpers function to handle UUID
+Discounts are applied step by step.
+
+```ts
+discounted_unit_price = base_price × ∏(1 - dᵢ / 100)
+```
+
+Example:
+
+```ts
+// base: 100
+// steps: [20, 20, 10]
+100 * 0.8 * 0.8 * 0.9 // 57.6
+```
+
+Do not sum discounts first. This is wrong:
+
+```ts
+100 * (1 - 0.5) // 50, incorrect
+```
+
+All discount logic must live in `composables/useDiscount.ts`. No inline discount calculation in pages or components.
+
+### 5.2 Cash Basis
+
+`Omzet`, `Laba HL`, and bonus accumulation count only transactions where:
 
 ```sql
--- customers
+status = 'lunas'
+```
+
+Transactions with `status = 'piutang'` must not affect revenue, profit, or bonus accumulation.
+
+### 5.3 Internal Cost Protection
+
+Never expose these fields in customer-facing outputs:
+
+- `harga_modal`
+- `harga_modal_snap`
+- `line_laba_hl`
+
+They may appear only in internal recap pages and operator-only Bon detail screens.
+
+### 5.4 Soft Delete
+
+Never hard-delete customers or products that have transaction history.
+
+Use:
+
+```sql
+deleted_at = now()
+```
+
+Soft-deleted records:
+
+- Stay visible in historical Bon data.
+- Are hidden from active selectors and new Bon forms.
+- Are excluded from active customer/product lists.
+
+### 5.5 Nomor Bon Uniqueness
+
+`nomor_bon` must be unique in the database and validated on blur in the UI.
+
+Error message:
+
+```text
+Nomor bon sudah digunakan.
+```
+
+### 5.6 Ongkir is Pass-Through
+
+`ongkir` increases the amount the customer owes, but does not count as:
+
+- Omzet
+- Laba HL
+- Bonus accumulator
+
+### 5.7 Atomic Settle Month
+
+The settle month operation must update all qualifying Bon in one Supabase RPC call.
+
+Do not loop in JavaScript and update one row at a time.
+
+### 5.8 Price Snapshots
+
+When creating transaction lines, store snapshots:
+
+- `harga_modal_snap`
+- `harga_base_snap`
+- `discounted_price`
+- `line_omzet`
+- `line_laba_hl`
+
+Historical Bon must not change when product prices or customer discounts are edited later.
+
+---
+
+## 6. Tech Stack Rules
+
+### 6.1 Nuxt 3 and TypeScript
+
+- Use `<script setup lang="ts">` for all Vue files.
+- Use Nuxt auto-imports for composables and components.
+- Use `useFetch` or `useAsyncData` for page-level data loading.
+- Use `$fetch` for client-side mutations.
+- Use typed props and emits.
+- Avoid `any`. Use generated Supabase types or local interfaces.
+- Use middleware in `middleware/auth.global.ts` for auth protection.
+- Use server routes only when client-side Supabase is insufficient.
+
+### 6.2 Tailwind CSS
+
+- Configure all tokens from `DESIGN.md` in `tailwind.config.js`.
+- No inline `style=""` unless there is no reasonable Tailwind alternative.
+- Use props-driven class maps for component variants.
+- Use `font-mono` for IDR values in tables.
+- Use responsive classes from mobile to desktop: base, `sm:`, `md:`, `lg:`.
+- Keep spacing consistent. Do not invent one-off spacing patterns.
+
+### 6.3 Supabase
+
+- Use `@nuxtjs/supabase` and the typed Supabase client.
+- Keep RLS enabled on every table.
+- Use `.rpc()` for multi-row atomic operations.
+- Supabase Realtime is disabled for v1.
+- Never commit real Supabase keys.
+- Store environment values in `.env` or `.env.local` only.
+
+Expected env names:
+
+```bash
+SUPABASE_URL=
+SUPABASE_KEY=
+```
+
+After every schema change:
+
+```bash
+supabase gen types typescript --local > types/supabase.ts
+```
+
+---
+
+## 7. Database Schema Reference
+
+Keep migrations in `supabase/migrations/`. Use `gen_random_uuid()` for database UUIDs and a small helper for client-side temporary IDs when needed.
+
+### 7.1 Tables
+
+```sql
 CREATE TABLE customers (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  nama            text NOT NULL,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nama text NOT NULL,
   bonus_threshold integer NOT NULL DEFAULT 0,
   bonuses_granted integer NOT NULL DEFAULT 0,
-  deleted_at      timestamptz NULL,
-  created_at      timestamptz NOT NULL DEFAULT now()
+  deleted_at timestamptz NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- discount_steps (ordered per customer per type)
 CREATE TABLE discount_steps (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  customer_id  uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   product_type text NOT NULL CHECK (product_type IN ('LM', 'BR')),
-  step_order   integer NOT NULL,
-  percentage   numeric(5,2) NOT NULL CHECK (percentage >= 0 AND percentage <= 100),
+  step_order integer NOT NULL,
+  percentage numeric(5,2) NOT NULL CHECK (percentage >= 0 AND percentage <= 100),
   UNIQUE (customer_id, product_type, step_order)
 );
 
--- products
 CREATE TABLE products (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  nama        text NOT NULL,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nama text NOT NULL,
   harga_modal numeric(15,2) NOT NULL CHECK (harga_modal >= 0),
-  harga_base  numeric(15,2) NOT NULL CHECK (harga_base >= 0),
-  tipe        text NOT NULL CHECK (tipe IN ('LM', 'BR')),
-  deleted_at  timestamptz NULL,
-  created_at  timestamptz NOT NULL DEFAULT now()
+  harga_base numeric(15,2) NOT NULL CHECK (harga_base >= 0),
+  tipe text NOT NULL CHECK (tipe IN ('LM', 'BR')),
+  deleted_at timestamptz NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- transactions (bon)
 CREATE TABLE transactions (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  nomor_bon    text NOT NULL UNIQUE,
-  tanggal      date NOT NULL DEFAULT CURRENT_DATE,
-  customer_id  uuid NOT NULL REFERENCES customers(id),
-  ongkir       numeric(15,2) NOT NULL DEFAULT 0 CHECK (ongkir >= 0),
-  deskripsi    text,
-  is_bonus     boolean NOT NULL DEFAULT false,
-  status       text NOT NULL DEFAULT 'piutang' CHECK (status IN ('piutang', 'lunas')),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nomor_bon text NOT NULL UNIQUE,
+  tanggal date NOT NULL DEFAULT CURRENT_DATE,
+  customer_id uuid NOT NULL REFERENCES customers(id),
+  ongkir numeric(15,2) NOT NULL DEFAULT 0 CHECK (ongkir >= 0),
+  deskripsi text,
+  is_bonus boolean NOT NULL DEFAULT false,
+  status text NOT NULL DEFAULT 'piutang' CHECK (status IN ('piutang', 'lunas')),
   tanggal_lunas date NULL,
-  created_at   timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- transaction_lines
 CREATE TABLE transaction_lines (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  transaction_id    uuid NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
-  product_id        uuid NOT NULL REFERENCES products(id),
-  product_type      text NOT NULL CHECK (product_type IN ('LM', 'BR')),
-  harga_modal_snap  numeric(15,2) NOT NULL,
-  harga_base_snap   numeric(15,2) NOT NULL,
-  discounted_price  numeric(15,2) NOT NULL,
-  qty               integer NOT NULL CHECK (qty >= 1),
-  line_omzet        numeric(15,2) NOT NULL,
-  line_laba_hl      numeric(15,2) NOT NULL
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_id uuid NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+  product_id uuid NOT NULL REFERENCES products(id),
+  product_type text NOT NULL CHECK (product_type IN ('LM', 'BR')),
+  harga_modal_snap numeric(15,2) NOT NULL,
+  harga_base_snap numeric(15,2) NOT NULL,
+  discounted_price numeric(15,2) NOT NULL,
+  qty integer NOT NULL CHECK (qty >= 1),
+  line_omzet numeric(15,2) NOT NULL,
+  line_laba_hl numeric(15,2) NOT NULL
 );
 ```
 
-### 3.2 RLS Policies
+### 7.2 RLS
+
+RLS must be enabled on all tables.
 
 ```sql
--- Enable RLS on all tables
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE discount_steps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transaction_lines ENABLE ROW LEVEL SECURITY;
-
--- Single-user policy: allow all operations for the authenticated user
--- Replace 'YOUR_USER_UUID' with the actual user UUID after seeding auth
-CREATE POLICY "owner_all" ON customers FOR ALL
-  USING (auth.uid() = 'YOUR_USER_UUID'::uuid);
-
--- (Repeat for each table)
 ```
 
-### 3.3 Supabase RPC: settle_month
+Use a single-user owner policy for authenticated access. Replace the placeholder with the actual authenticated user UUID during setup.
+
+```sql
+CREATE POLICY "owner_all" ON customers
+FOR ALL
+USING (auth.uid() = 'YOUR_USER_UUID'::uuid)
+WITH CHECK (auth.uid() = 'YOUR_USER_UUID'::uuid);
+```
+
+Repeat the policy for each table.
+
+### 7.3 RPC: Settle Month
 
 ```sql
 CREATE OR REPLACE FUNCTION settle_month(
-  p_customer_id   uuid,
-  p_year          integer,
-  p_month         integer,
+  p_customer_id uuid,
+  p_year integer,
+  p_month integer,
   p_tanggal_lunas date
 )
 RETURNS integer AS $$
@@ -239,67 +427,46 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-Returns the number of Bon settled. Use this count to show "7 bon berhasil dilunasi."
+Success copy example:
+
+```text
+7 bon berhasil dilunasi.
+```
 
 ---
 
-## 4. Composables Reference
+## 8. Required Utilities and Composables
 
-### 4.1 `composables/useDiscount.ts`
+### 8.1 `composables/useDiscount.ts`
 
 ```ts
-/**
- * Calculates cascading discounted price.
- * steps: ordered array of percentages, e.g. [20, 20, 10]
- * Returns: discounted price (same unit as basePrice)
- */
-export function calcDiscountedPrice(
-  basePrice: number,
-  steps: number[],
-): number {
+export function calcDiscountedPrice(basePrice: number, steps: number[]): number {
   if (!steps.length) return basePrice;
   return steps.reduce((price, step) => price * (1 - step / 100), basePrice);
 }
 
-/**
- * Returns effective discount percentage from cascading steps.
- * e.g. [20, 20, 10] → 42.4
- */
 export function effectiveDiscountPct(steps: number[]): number {
-  const discountedRatio = steps.reduce((r, step) => r * (1 - step / 100), 1);
+  const discountedRatio = steps.reduce((ratio, step) => ratio * (1 - step / 100), 1);
   return (1 - discountedRatio) * 100;
 }
 
-/**
- * Human-readable chain label. e.g. [20, 20, 10] → "20-20-10"
- */
 export function discountChainLabel(steps: number[]): string {
-  return steps.join("-");
+  return steps.length ? steps.join('-') : 'Tanpa diskon';
 }
 ```
 
-### 4.2 `composables/useBonusCalc.ts`
+### 8.2 `composables/useBonusCalc.ts`
 
 ```ts
-/**
- * How many bonuses the customer has available to claim.
- */
 export function calcBonusesAvailable(
   accumulatedLunasOmzet: number,
   threshold: number,
   alreadyGranted: number,
 ): number {
   if (threshold <= 0) return 0;
-  return Math.max(
-    0,
-    Math.floor(accumulatedLunasOmzet / threshold) - alreadyGranted,
-  );
+  return Math.max(0, Math.floor(accumulatedLunasOmzet / threshold) - alreadyGranted);
 }
 
-/**
- * How much omzet a customer has accumulated toward the next bonus.
- * Returns the remainder after consuming full bonus cycles.
- */
 export function bonusRemainder(
   accumulatedLunasOmzet: number,
   threshold: number,
@@ -307,203 +474,267 @@ export function bonusRemainder(
 ): number {
   if (threshold <= 0) return 0;
   const consumed = alreadyGranted * threshold;
-  return accumulatedLunasOmzet - consumed;
+  return Math.max(0, accumulatedLunasOmzet - consumed);
 }
 ```
 
-### 4.3 `utils/currency.ts`
+### 8.3 `utils/currency.ts`
 
 ```ts
 export function formatRp(amount: number | null | undefined): string {
-  if (amount == null) return "Rp 0";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
+  if (amount == null) return 'Rp 0';
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
 export function parseRpInput(value: string): number {
-  return parseInt(value.replace(/\D/g, ""), 10) || 0;
+  return Number.parseInt(value.replace(/\D/g, ''), 10) || 0;
 }
 ```
 
-### 4.4 `utils/date.ts`
+### 8.4 `utils/date.ts`
 
 ```ts
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+  return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   }).format(new Date(date));
-  // Output: "15/06/2026"
 }
 
 export function monthLabel(year: number, month: number): string {
-  return new Intl.DateTimeFormat("id-ID", {
-    month: "long",
-    year: "numeric",
+  return new Intl.DateTimeFormat('id-ID', {
+    month: 'long',
+    year: 'numeric',
   }).format(new Date(year, month - 1));
-  // Output: "Juni 2026"
+}
+```
+
+### 8.5 `utils/id.ts`
+
+Use this only for temporary client-side keys, form rows, and optimistic UI. Database IDs must still use Supabase UUID defaults.
+
+```ts
+export function createTempId(prefix = 'tmp'): string {
+  return `${prefix}_${crypto.randomUUID()}`;
 }
 ```
 
 ---
 
-## 5. Task Protocol
+## 9. Task Workflow
 
-When given a coding task, follow this order. Don't skip steps.
+Follow this order for every coding task.
 
-### Step 1: Identify scope
+### Step 1: Understand Scope
 
-Read the task. Map it to the relevant sections in SRS.md, PRD.md, and DESIGN.md. If the task touches calculation logic, re-read Section 4 of SRS.md (Master Calculation Reference) before writing anything.
+Identify:
 
-### Step 2: Schema first
+- Which user flow changes.
+- Which PRD/SRS acceptance criteria apply.
+- Which `.agents/skills` apply.
+- Whether schema, business logic, UI, or PDF output is affected.
 
-If the task needs a new table or column, write the migration SQL first. Get that right before writing any Vue or TS.
+### Step 2: Update Schema First
 
-### Step 3: Composable logic before UI
+If the task needs a new table, column, index, policy, or RPC, create the migration first.
 
-If the task involves business logic (discounts, bonus calc, report aggregation), write and test the composable first as a pure function. Then wire it into the UI.
+### Step 3: Implement Pure Logic
 
-### Step 4: Build the UI
+For calculation tasks, implement composables first and keep them testable.
 
-Follow DESIGN.md exactly. Use the color tokens. Use the component patterns. Write all user-visible text in Bahasa Indonesia.
+Examples:
 
-### Step 5: Validate edge cases
+- `useDiscount.ts`
+- `useBonusCalc.ts`
+- `useReportCalc.ts`
 
-After building, verify:
+### Step 4: Build UI with Design System
 
-- Empty states (no transactions, no customers, no products)
-- Soft-deleted items are hidden from pickers
-- Nomor Bon duplicate shows the right error
-- A customer with 0 discount steps gets base price (no crash)
-- A customer with `bonus_threshold = 0` shows no bonus badge
+Use existing components and patterns from `DESIGN.md`. Do not create a new visual language for one page.
 
-### Step 6: Write types
+### Step 5: Validate Edge Cases
 
-Export TypeScript interfaces for all DB row types. Store them in `types/` (or use the Supabase-generated types).
+Check:
 
----
+- Empty data
+- Loading states
+- Error states
+- Duplicate Nomor Bon
+- Customer with no discount
+- Customer with `bonus_threshold = 0`
+- Soft-deleted records hidden from selectors
+- Mobile width at 375px
+- PDF output does not leak internal cost fields
 
-## 6. Writing Standards (for code comments, README, copy)
+### Step 6: Final Response
 
-Apply `ANTI-SLOP.md` rules to all written text in this project:
+When done, summarize:
 
-- Comments explain WHY, not WHAT (the code shows what)
-- No filler phrases: no "This function handles...", no "This component is responsible for..."
-- User-facing error messages in Indonesian are direct and specific: "Nomor bon sudah digunakan" not "An error occurred"
-- README is plain and functional. No marketing language.
-- No em dashes in comments or docs. Use commas, colons, or periods.
+- What changed
+- Files changed
+- Skills applied
+- Tests or checks run
+- Any known limitations
 
----
-
-## 7. Anti-Patterns
-
-These are bugs or design mistakes to avoid. If you see one in existing code, fix it.
-
-| Anti-pattern                                                                 | Why it's wrong                                        | Fix                                         |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- |
-| Summing discount percentages: `1 - (d1 + d2 + d3)/100`                       | Gives wrong effective discount                        | Use `∏(1 − dᵢ/100)`                         |
-| Counting Piutang transactions in Omzet totals                                | Violates cash basis (D3)                              | Filter `WHERE status = 'lunas'`             |
-| Computing `discounted_price` at read time from current product/discount data | Historical Bon would change if prices are edited      | Use stored snapshots on `transaction_lines` |
-| Separate JS loop to settle each Bon individually                             | Not atomic; partial failures leave inconsistent state | Use Supabase RPC                            |
-| Showing `line_laba_hl` or `harga_modal` in customer-facing PDFs              | Exposes internal cost data                            | Exclude these columns from PDF templates    |
-| Using free-text input for customer or product selection in Bon form          | Breaks referential integrity                          | Enforce dropdown selection only             |
-| Hard-deleting a customer or product that has transaction lines               | Breaks historical data                                | Soft-delete only                            |
-| Allowing `bonuses_available` to go negative                                  | Logic error in grant flow                             | Use `Math.max(0, ...)` in calc              |
-| Ongkir included in Omzet or Laba calculation                                 | Wrong accounting                                      | Omzet excludes ongkir; Laba excludes ongkir |
+Keep the final response concise and factual.
 
 ---
 
-## 8. Environment Setup
+## 10. UI Component Standards
 
-```bash
-# Clone and install
-npm install
+### 10.1 Core Components
 
-# Set up env
-cp .env.example .env
-# Fill in SUPABASE_URL and SUPABASE_ANON_KEY
+Prefer reusable components for:
 
-# Run Supabase locally (optional)
-npx supabase start
+- `AppButton`
+- `AppInput`
+- `AppSelect`
+- `AppTextarea`
+- `AppModal`
+- `AppConfirmDialog`
+- `StatusBadge`
+- `SummaryCard`
+- `DataTable`
+- `EmptyState`
+- `PageHeader`
+- `FormSection`
+- `CurrencyInput`
+- `DateInput`
+- `Toast`
 
-# Apply migrations
-npx supabase db push
+### 10.2 Forms
 
-# Generate TypeScript types from schema
-npx supabase gen types typescript --local > types/supabase.ts
+Forms must be simple for non-technical users.
 
-# Start dev server
-npm run dev
+Rules:
+
+- Group fields into sections.
+- Put required fields first.
+- Use clear helper text for discount, bonus, and ongkir.
+- Validate before submit.
+- Show field-level errors.
+- Disable submit while saving.
+- Use action labels that describe the result.
+
+Good buttons:
+
+```text
+Simpan Pelanggan
+Buat Bon
+Lunasi Bulan Ini
+Unduh PDF
 ```
 
+Avoid:
+
+```text
+Submit
+Process
+OK
+Execute
+```
+
+### 10.3 Tables
+
+Every important table should include:
+
+- Search when rows can exceed 10.
+- Status filter when data has `Piutang` and `Lunas`.
+- Empty state.
+- Loading state.
+- Mobile-friendly stacked layout or horizontal scroll.
+- Right-aligned IDR columns with `font-mono`.
+
+### 10.4 Dashboard
+
+Dashboard must answer the user's daily questions quickly:
+
+- Berapa piutang saat ini?
+- Bon mana yang belum lunas?
+- Pelanggan mana yang perlu ditagih?
+- Bonus apa yang sudah bisa diberikan?
+- Bagaimana performa bulan ini?
+
+Avoid vanity metrics that do not support decisions.
+
 ---
 
-## 9. Supabase Query Patterns
+## 11. Supabase Query Patterns
 
-### Fetch customer with discount steps
+### 11.1 Fetch Customer with Discount Steps
 
 ```ts
-const { data } = await supabase
-  .from("customers")
-  .select(
-    `
+const { data, error } = await supabase
+  .from('customers')
+  .select(`
     *,
     discount_steps (
-      id, product_type, step_order, percentage
+      id,
+      product_type,
+      step_order,
+      percentage
     )
-  `,
-  )
-  .eq("id", customerId)
-  .is("deleted_at", null)
+  `)
+  .eq('id', customerId)
+  .is('deleted_at', null)
   .single();
 
-// Sort discount steps client-side after fetch
-const lmSteps = data.discount_steps
-  .filter((s) => s.product_type === "LM")
+if (error) throw error;
+
+const lmSteps = [...(data.discount_steps ?? [])]
+  .filter((step) => step.product_type === 'LM')
   .sort((a, b) => a.step_order - b.step_order)
-  .map((s) => s.percentage);
+  .map((step) => Number(step.percentage));
 ```
 
-### Fetch bonus accumulator for a customer
+### 11.2 Fetch Bonus Accumulator
 
 ```ts
-const { data } = await supabase
-  .from("transactions")
-  .select("id, transaction_lines(line_omzet)")
-  .eq("customer_id", customerId)
-  .eq("status", "lunas")
-  .eq("is_bonus", false);
+const { data, error } = await supabase
+  .from('transactions')
+  .select('id, transaction_lines(line_omzet)')
+  .eq('customer_id', customerId)
+  .eq('status', 'lunas')
+  .eq('is_bonus', false);
 
-const accumulator = data.reduce(
-  (sum, tx) => sum + tx.transaction_lines.reduce((s, l) => s + l.line_omzet, 0),
-  0,
-);
+if (error) throw error;
+
+const accumulator = (data ?? []).reduce((total, transaction) => {
+  const lineTotal = transaction.transaction_lines.reduce(
+    (sum, line) => sum + Number(line.line_omzet),
+    0,
+  );
+
+  return total + lineTotal;
+}, 0);
 ```
 
-### Settle a month
+### 11.3 Settle Month
 
 ```ts
-const { data, error } = await supabase.rpc("settle_month", {
+const { data, error } = await supabase.rpc('settle_month', {
   p_customer_id: customerId,
   p_year: year,
   p_month: month,
   p_tanggal_lunas: tanggalLunas,
 });
-// data = number of Bon settled
+
+if (error) throw error;
 ```
 
-### Recap query (monthly breakdown, one customer)
+### 11.4 Yearly Recap Query
 
 ```ts
-const { data } = await supabase
-  .from("transactions")
-  .select(
-    `
+const { data, error } = await supabase
+  .from('transactions')
+  .select(`
     tanggal,
     ongkir,
     status,
@@ -513,34 +744,34 @@ const { data } = await supabase
       line_omzet,
       line_laba_hl
     )
-  `,
-  )
-  .eq("customer_id", customerId)
-  .gte("tanggal", `${year}-01-01`)
-  .lte("tanggal", `${year}-12-31`)
-  .order("tanggal", { ascending: true });
+  `)
+  .eq('customer_id', customerId)
+  .gte('tanggal', `${year}-01-01`)
+  .lte('tanggal', `${year}-12-31`)
+  .order('tanggal', { ascending: true });
+
+if (error) throw error;
 ```
 
-Aggregate the results in `useReportCalc.ts`, not in the query. Keep queries simple and composable.
+Aggregate reporting data in `useReportCalc.ts`, not directly in components.
 
 ---
 
-## 10. PDF Export Implementation
+## 12. PDF Export
 
-Use `html2pdf.js` (browser-side, no server needed).
+Use browser-side export with `html2pdf.js`.
 
 ```ts
-// composables/usePdfExport.ts
-import html2pdf from "html2pdf.js";
+import html2pdf from 'html2pdf.js';
 
 export function usePdfExport() {
   function exportToPdf(element: HTMLElement, filename: string) {
-    html2pdf(element, {
-      margin: [10, 10, 15, 10], // mm: top, right, bottom, left
+    return html2pdf(element, {
+      margin: [10, 10, 15, 10],
       filename,
-      image: { type: "jpeg", quality: 0.95 },
+      image: { type: 'jpeg', quality: 0.95 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     });
   }
 
@@ -548,23 +779,153 @@ export function usePdfExport() {
 }
 ```
 
-The template to export is a hidden `<div ref="pdfTarget">` in the page. It mirrors the on-screen table but excludes Laba HL and Harga Modal from customer PDFs.
+PDF rules:
 
-PDF filename pattern: `HL-[report-type]-[customer-name]-[period].pdf`  
-Example: `HL-piutang-budi-santoso-juni-2026.pdf`
+- Use a hidden `ref="pdfTarget"` template.
+- Mirror the visible table, but remove internal fields.
+- Never include `harga_modal`, `harga_modal_snap`, or `line_laba_hl` in customer-facing PDF.
+- Use clean A4 portrait layout.
+- Use readable font size and spacing.
+
+Filename format:
+
+```text
+HL-[report-type]-[customer-name]-[period].pdf
+```
+
+Example:
+
+```text
+HL-piutang-budi-santoso-juni-2026.pdf
+```
 
 ---
 
-## 11. Component Checklist
+## 13. Writing Standards
 
-Before marking a component done, verify:
+Apply `ANTI-SLOP.md` for UI copy, comments, README, and docs.
 
-- All user-visible text is in Bahasa Indonesia
-- Currency amounts use `formatRp()` from `utils/currency.ts`
-- Dates use `formatDate()` or `monthLabel()` from `utils/date.ts`
-- IDR amounts in tables use `font-mono` class
-- Loading state handled (skeleton or spinner)
-- Empty state handled ("Belum ada data")
-- Error state handled (inline or toast)
-- Mobile layout tested at 375px width
-- `harga_modal` and `line_laba_hl` are NOT exposed in customer-facing outputs
+### 13.1 UI Copy
+
+Good:
+
+```text
+Belum ada bon untuk bulan ini.
+Nomor bon sudah digunakan.
+Pilih pelanggan terlebih dahulu.
+7 bon berhasil dilunasi.
+```
+
+Avoid:
+
+```text
+No data available.
+An error occurred.
+Invalid input.
+Operation completed successfully.
+```
+
+### 13.2 Comments
+
+Comments explain why, not what.
+
+Good:
+
+```ts
+// Snapshot prevents historical Bon totals from changing after price edits.
+```
+
+Avoid:
+
+```ts
+// Set discounted price variable.
+```
+
+### 13.3 Documentation
+
+Docs must be plain, direct, and useful. No marketing tone. No filler.
+
+---
+
+## 14. Anti-Patterns
+
+| Anti-pattern | Why it is wrong | Required fix |
+| --- | --- | --- |
+| Summing discount percentages | Cascading discount becomes incorrect | Use `calcDiscountedPrice()` |
+| Counting `piutang` in omzet | Violates cash basis | Filter `status = 'lunas'` |
+| Calculating historical prices at read time | Past Bon changes after price edits | Store and read snapshots |
+| Settling Bon in a JS loop | Non-atomic and can partially fail | Use `settle_month` RPC |
+| Showing `harga_modal` in customer PDFs | Leaks internal cost data | Remove from PDF template |
+| Free-text customer/product input | Breaks data integrity | Use selected records only |
+| Hard-deleting used customer/product | Breaks historical records | Use soft delete |
+| Bonus count below zero | Incorrect grant state | Use `Math.max(0, value)` |
+| Ongkir included in laba or omzet | Wrong accounting | Treat ongkir as pass-through |
+| Generic AI dashboard cards | Poor usability | Use task-based summaries |
+
+---
+
+## 15. Environment Setup
+
+```bash
+npm install
+cp .env.example .env
+npx supabase start
+npx supabase db push
+npx supabase gen types typescript --local > types/supabase.ts
+npm run dev
+```
+
+`.env.example`:
+
+```bash
+SUPABASE_URL=
+SUPABASE_KEY=
+```
+
+Do not commit real credentials.
+
+---
+
+## 16. Completion Checklist
+
+Before saying a task is done, verify:
+
+- Business rules still match this file.
+- All UI copy is Bahasa Indonesia.
+- Money uses `formatRp()`.
+- Dates use `formatDate()` or `monthLabel()`.
+- Tables have search/filter when needed.
+- Forms have field-level validation.
+- Empty, loading, and error states exist.
+- Mobile layout works at 375px.
+- RLS remains enabled.
+- Types are regenerated after schema changes.
+- PDF output does not expose internal costs.
+- Relevant `.agents/skills` were applied.
+- The result does not look like generic AI-generated UI.
+
+---
+
+## 17. Agent Final Response Template
+
+Use this format after completing code work:
+
+```md
+Done.
+
+Changed:
+- ...
+- ...
+
+Checks:
+- ...
+
+Applied skills:
+- Hallmark
+- ...
+
+Notes:
+- ...
+```
+
+Keep it short. Do not include long explanations unless asked.
