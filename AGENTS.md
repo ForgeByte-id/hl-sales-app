@@ -131,6 +131,8 @@ Apply these as Supabase migrations. Keep migration files in `supabase/migrations
 
 ### 3.1 Tables
 
+# Important Notes : create a helpers function to handle UUID
+
 ```sql
 -- customers
 CREATE TABLE customers (
