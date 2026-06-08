@@ -9,6 +9,8 @@
 
 Read this file fully before writing any code. It is the authoritative source of truth. If this file conflicts with something in chat, this file wins.
 
+# IMPORTANT NOTES : If my prompt is ambiguous, please make sure you ask or reconfirm with me.
+
 ---
 
 ## 0. Quick Reference
