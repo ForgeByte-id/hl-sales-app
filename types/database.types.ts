@@ -6,6 +6,7 @@ export type Database = {
       customers: {
         Row: {
           id: string
+          owner_uid: string
           nama: string
           bonus_threshold: number
           bonuses_granted: number
@@ -14,6 +15,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          owner_uid?: string
           nama: string
           bonus_threshold?: number
           bonuses_granted?: number
@@ -22,6 +24,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          owner_uid?: string
           nama?: string
           bonus_threshold?: number
           bonuses_granted?: number
@@ -32,6 +35,7 @@ export type Database = {
       discount_steps: {
         Row: {
           id: string
+          owner_uid: string
           customer_id: string
           product_type: 'LM' | 'BR'
           step_order: number
@@ -39,6 +43,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          owner_uid?: string
           customer_id: string
           product_type: 'LM' | 'BR'
           step_order: number
@@ -46,6 +51,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          owner_uid?: string
           customer_id?: string
           product_type?: 'LM' | 'BR'
           step_order?: number
@@ -55,6 +61,7 @@ export type Database = {
       products: {
         Row: {
           id: string
+          owner_uid: string
           nama: string
           harga_modal: number
           harga_base: number
@@ -64,6 +71,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          owner_uid?: string
           nama: string
           harga_modal: number
           harga_base: number
@@ -73,6 +81,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          owner_uid?: string
           nama?: string
           harga_modal?: number
           harga_base?: number
@@ -84,6 +93,7 @@ export type Database = {
       transactions: {
         Row: {
           id: string
+          owner_uid: string
           nomor_bon: string
           tanggal: string
           customer_id: string
@@ -96,6 +106,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          owner_uid?: string
           nomor_bon: string
           tanggal?: string
           customer_id: string
@@ -108,6 +119,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          owner_uid?: string
           nomor_bon?: string
           tanggal?: string
           customer_id?: string
@@ -122,6 +134,7 @@ export type Database = {
       transaction_lines: {
         Row: {
           id: string
+          owner_uid: string
           transaction_id: string
           product_id: string
           product_type: 'LM' | 'BR'
@@ -134,6 +147,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          owner_uid?: string
           transaction_id: string
           product_id: string
           product_type: 'LM' | 'BR'
@@ -146,6 +160,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          owner_uid?: string
           transaction_id?: string
           product_id?: string
           product_type?: 'LM' | 'BR'
