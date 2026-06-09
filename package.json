@@ -9,7 +9,21 @@
     "preview": "nuxt preview",
     "test": "vitest run",
     "postinstall": "nuxt prepare",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "typecheck": "nuxi typecheck"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,scss,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@nuxt/icon": "^2.2.3",
@@ -24,8 +38,10 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.111",
     "@types/node": "^25.9.2",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.8.3",
     "shadcn-nuxt": "^2.7.4",
-    "vitest": "^4.1.8",
-    "husky": "^8.0.0"
+    "vitest": "^4.1.8"
   }
 }

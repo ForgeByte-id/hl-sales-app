@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+set -e
+
+echo "📝 Running type checker..."
+npm run typecheck
+
+echo "📋 Running full linter..."
+npm run lint
+
+echo "🧪 Running tests..."
+npm run test
+
+echo "🏗️  Running build..."
+npm run build
+
+echo "✅ All checks passed! Proceeding with push..."
+exit 0
