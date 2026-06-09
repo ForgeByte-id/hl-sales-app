@@ -1,15 +1,20 @@
 <template>
-  <PlaceholderTemplate
-    title="Tambah Produk"
-    description="Form produk akan memuat nama, tipe LM/BR, harga base, dan harga modal internal."
-    eyebrow="Produk"
-    empty-title="Form produk sedang disiapkan"
-    empty-description="Harga modal akan disimpan untuk perhitungan laba dan tidak ditampilkan di output pelanggan."
-  />
+  <AppShell>
+    <ProductForm title="Tambah Produk" submit-label="Simpan" @submit="createProduct" />
+  </AppShell>
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  middleware: ['auth'],
-})
+import type { Database } from '~~/types/database.types'
+
+definePageMeta({ middleware: ['auth'] })
+
+const supabase = useSupabaseClient<Database>()
+const router = useRouter()
+
+async function createProduct(payload: { nama: string; tipe: 'LM' | 'BR'; harga_modal: number; harga_base: number }) {
+  const { error } = await supabase.from('products').insert(payload)
+  if (error) throw error
+  await router.push('/products')
+}
 </script>

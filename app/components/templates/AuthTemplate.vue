@@ -3,11 +3,7 @@
     <div class="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
       <section class="hidden lg:block">
         <div class="max-w-xl">
-          <div class="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white/80 px-3 py-1 text-xs font-medium text-brand-700 shadow-soft dark:border-neutral-800 dark:bg-neutral-900/80 dark:text-brand-100">
-            <Icon name="lucide:sparkles" class="size-3.5" aria-hidden="true" />
-            <span>Rapi untuk bon, piutang, dan bonus</span>
-          </div>
-          <h1 class="mt-5 text-4xl font-semibold leading-tight text-neutral-950 dark:text-neutral-50">
+          <h1 class="text-4xl font-semibold leading-tight text-neutral-950 dark:text-neutral-50">
             Catatan penjualan yang terasa tenang, jelas, dan siap dipakai setiap hari.
           </h1>
           <p class="mt-4 max-w-lg text-base leading-7 text-neutral-600 dark:text-neutral-300">
