@@ -62,7 +62,7 @@
           class="mt-1 size-4 rounded border-neutral-300 text-brand-600 focus:ring-brand-500 dark:border-neutral-700"
         />
         <span>
-          <span class="block font-medium">Remember me</span>
+          <span class="block font-medium">Ingat email saya</span>
           <span class="block text-xs text-neutral-500 dark:text-neutral-400">
             Simpan sesi login selama 7 hari di perangkat ini.
           </span>

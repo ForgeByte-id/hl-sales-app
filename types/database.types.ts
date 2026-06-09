@@ -224,6 +224,22 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      save_transaction: {
+        Args: {
+          p_bonus_units: number;
+          p_customer_id: string;
+          p_deskripsi: string | null;
+          p_is_bonus: boolean;
+          p_lines: Json;
+          p_nomor_bon: string;
+          p_ongkir: number;
+          p_status: string;
+          p_tanggal: string;
+          p_tanggal_lunas: string | null;
+          p_transaction_id: string | null;
+        };
+        Returns: string;
+      };
       settle_month: {
         Args: {
           p_customer_id: string;

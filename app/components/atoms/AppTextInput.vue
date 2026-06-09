@@ -18,14 +18,23 @@
         :value="modelValue"
         :type="type"
         :placeholder="placeholder"
+        :min="min"
+        :autocomplete="autocomplete"
         class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-neutral-400"
         @input="
           $emit('update:modelValue', ($event.target as HTMLInputElement).value)
         "
+        @blur="$emit('blur')"
       />
     </span>
     <span
-      v-if="helper"
+      v-if="error"
+      class="mt-1 block text-xs leading-5 text-danger-text dark:text-danger-darkText"
+    >
+      {{ error }}
+    </span>
+    <span
+      v-else-if="helper"
       class="mt-1 block text-xs leading-5 text-neutral-500 dark:text-neutral-400"
     >
       {{ helper }}
@@ -40,18 +49,25 @@ withDefaults(
     label: string;
     placeholder?: string;
     helper?: string;
+    error?: string;
     icon?: string;
     type?: string;
+    min?: string | number;
+    autocomplete?: string;
   }>(),
   {
     placeholder: "",
     helper: "",
+    error: "",
     icon: "",
     type: "text",
+    min: undefined,
+    autocomplete: undefined,
   },
 );
 
 defineEmits<{
   "update:modelValue": [value: string];
+  blur: [];
 }>();
 </script>

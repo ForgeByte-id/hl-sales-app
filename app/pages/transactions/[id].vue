@@ -22,7 +22,7 @@
           <AppButton
             v-if="transaction.status === 'piutang'"
             icon="lucide:check"
-            @click="settle"
+            @click="settleDialogOpen = true"
             >Lunas</AppButton
           >
           <AppButton icon="lucide:printer" @click="exportDetail">PDF</AppButton>
@@ -100,6 +100,49 @@
           </table>
         </div>
       </SectionPanel>
+
+      <Teleport to="body">
+        <div
+          v-if="settleDialogOpen"
+          class="fixed inset-0 z-50 flex items-end justify-center bg-neutral-950/40 p-4 sm:items-center"
+        >
+          <section
+            class="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+          >
+            <h2
+              class="text-base font-semibold text-neutral-900 dark:text-neutral-50"
+            >
+              Lunasi Bon ini?
+            </h2>
+            <p
+              class="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400"
+            >
+              Pilih tanggal pelunasan untuk Bon ini.
+            </p>
+            <div class="mt-4">
+              <AppTextInput
+                v-model="settleDate"
+                label="Tanggal Pelunasan"
+                type="date"
+              />
+            </div>
+            <div
+              class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+            >
+              <AppButton variant="secondary" @click="settleDialogOpen = false"
+                >Batal</AppButton
+              >
+              <AppButton
+                icon="lucide:badge-check"
+                :disabled="settling"
+                @click="settle"
+              >
+                {{ settling ? "Memproses..." : "Lunasi" }}
+              </AppButton>
+            </div>
+          </section>
+        </div>
+      </Teleport>
     </div>
   </AppShell>
 </template>
@@ -112,7 +155,11 @@ definePageMeta({ middleware: ["auth"] });
 const supabase = useSupabaseClient<Database>();
 const route = useRoute();
 const { exportHtml } = usePdfExport();
+const toast = useToast();
 const transactionId = String(route.params.id);
+const settleDialogOpen = ref(false);
+const settleDate = ref(todayInputValue());
+const settling = ref(false);
 
 const { data: transaction, refresh } = await useAsyncData(
   `transaction-detail-${transactionId}`,
@@ -171,10 +218,21 @@ const summaryCards = computed(() => [
 ]);
 
 async function settle() {
-  await supabase
+  settling.value = true;
+  const { error } = await supabase
     .from("transactions")
-    .update({ status: "lunas", tanggal_lunas: todayInputValue() })
-    .eq("id", transactionId);
+    .update({ status: "lunas", tanggal_lunas: settleDate.value })
+    .eq("id", transactionId)
+    .eq("is_bonus", false);
+  settling.value = false;
+
+  if (error) {
+    toast.error("Bon belum bisa dilunasi.");
+    return;
+  }
+
+  toast.success("Bon berhasil dilunasi.");
+  settleDialogOpen.value = false;
   await refresh();
 }
 
@@ -188,7 +246,8 @@ function exportDetail() {
 
   exportHtml(
     `HL - ${transaction.value?.nomor_bon || "Bon"}`,
-    `<h1>HL - ${transaction.value?.nomor_bon || "Bon"}</h1><p>${transaction.value?.customers?.nama || ""}</p><table><thead><tr><th>Produk</th><th>Tipe</th><th class="right">Qty</th><th class="right">Harga</th><th class="right">Omzet</th></tr></thead><tbody>${rows}</tbody></table>`,
+    `<p>${transaction.value?.customers?.nama || ""}</p><table><thead><tr><th>Produk</th><th>Tipe</th><th class="right">Qty</th><th class="right">Harga</th><th class="right">Omzet</th></tr></thead><tbody>${rows}</tbody></table>`,
+    `HL-bon-${transaction.value?.nomor_bon || "bon"}.pdf`,
   );
 }
 </script>
