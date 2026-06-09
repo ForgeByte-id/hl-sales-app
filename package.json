@@ -8,7 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "test": "vitest run",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@nuxt/icon": "^2.2.3",
@@ -24,6 +25,7 @@
     "@iconify-json/lucide": "^1.2.111",
     "@types/node": "^25.9.2",
     "shadcn-nuxt": "^2.7.4",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "husky": "^8.0.0"
   }
 }
