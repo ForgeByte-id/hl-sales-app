@@ -21,18 +21,11 @@ Isi `.env.local`:
 ```bash
 SUPABASE_URL=
 SUPABASE_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-SEED_USER_EMAIL=
-SEED_USER_PASSWORD=
-SEED_USER_NAME=Pemilik
 ```
 
 Catatan:
 
 - `SUPABASE_KEY` adalah key publik untuk aplikasi.
-- `SUPABASE_SERVICE_ROLE_KEY` hanya dipakai untuk menjalankan seed user dari terminal. Jangan dipakai di tampilan aplikasi.
-- `SEED_USER_PASSWORD` minimal 8 karakter.
 
 ## Import Tabel
 
@@ -51,19 +44,23 @@ supabase db push
 
 Jika Supabase CLI belum tersedia, buka SQL Editor di dashboard Supabase, lalu jalankan isi file migration tersebut.
 
-## Seed User Awal
+## Seed User Awal SQL
 
-Setelah tabel selesai dibuat dan `.env.local` sudah diisi:
+File seed user ada di:
 
 ```bash
-npm run db:seed:user
+supabase/seed.sql
 ```
 
-Script ini akan:
+Sebelum menjalankan, buka file tersebut lalu ganti nilai berikut:
 
-- membuat user baru jika email belum ada;
-- memperbarui password jika email sudah ada;
-- menandai email sebagai sudah terkonfirmasi.
+```sql
+seed_email text := 'owner@example.com';
+seed_password text := 'change-me-12345';
+seed_name text := 'Pemilik';
+```
+
+Jalankan isi `supabase/seed.sql` dari SQL Editor setelah tabel selesai dibuat.
 
 ## Jalankan Aplikasi
 
