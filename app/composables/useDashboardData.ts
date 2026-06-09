@@ -83,7 +83,7 @@ export function useDashboardData() {
         ...emptyDashboard,
         isConfigured: false,
         setupMessage:
-          'Konfigurasi Supabase belum lengkap. Isi SUPABASE_URL dan SUPABASE_KEY di .env.local.',
+          'Koneksi data belum siap, jadi ringkasan usaha belum bisa ditampilkan.',
       }
     }
 
@@ -106,7 +106,7 @@ export function useDashboardData() {
       const message =
         transactionsResult.error?.message ||
         customersResult.error?.message ||
-        'Data belum bisa dibaca dari Supabase.'
+        'Data usaha belum bisa dibaca.'
 
       return {
         ...emptyDashboard,

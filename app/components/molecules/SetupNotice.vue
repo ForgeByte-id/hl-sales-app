@@ -5,12 +5,12 @@
     <div class="flex gap-3">
       <Icon name="lucide:triangle-alert" class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
       <div>
-        <h2 class="text-sm font-semibold">Perlu pengecekan konfigurasi</h2>
+        <h2 class="text-sm font-semibold">Data belum tersambung</h2>
         <p class="mt-1 text-sm leading-6">
           {{ message }}
         </p>
         <p class="mt-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
-          Pastikan file .env.local berisi SUPABASE_URL dan SUPABASE_KEY, lalu jalankan ulang dev server.
+          Hubungi pengelola aplikasi agar data usaha bisa tampil di dashboard.
         </p>
       </div>
     </div>

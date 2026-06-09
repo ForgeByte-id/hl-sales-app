@@ -1,9 +1,9 @@
 <template>
   <aside
-    class="flex h-full flex-col border-r border-neutral-200 bg-white px-3 py-4 dark:border-neutral-800 dark:bg-neutral-950"
+    class="flex h-full flex-col border-r border-neutral-200 bg-white px-3 py-4 shadow-[10px_0_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-950"
   >
     <NuxtLink to="/dashboard" class="flex items-center gap-2 rounded-md px-2 py-2">
-      <span class="flex size-9 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
+      <span class="flex size-9 items-center justify-center rounded-lg bg-neutral-950 text-sm font-bold text-white dark:bg-brand-600">
         HL
       </span>
       <span class="min-w-0">

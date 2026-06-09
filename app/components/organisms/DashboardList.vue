@@ -1,11 +1,11 @@
 <template>
   <SectionPanel :title="title" :description="description">
-    <div v-if="items.length" class="overflow-hidden rounded-md border border-neutral-200 dark:border-neutral-800">
+    <div v-if="items.length" class="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
       <ul class="divide-y divide-neutral-200 dark:divide-neutral-800">
         <li
           v-for="item in items"
           :key="item.id"
-          class="grid grid-cols-1 gap-2 bg-white px-3 py-3 hover:bg-brand-50 dark:bg-neutral-900 dark:hover:bg-neutral-800 sm:grid-cols-[1fr_auto] sm:items-center"
+          class="grid grid-cols-1 gap-2 bg-white px-3 py-3 transition hover:bg-brand-50 dark:bg-neutral-900 dark:hover:bg-neutral-800 sm:grid-cols-[1fr_auto] sm:items-center"
         >
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">

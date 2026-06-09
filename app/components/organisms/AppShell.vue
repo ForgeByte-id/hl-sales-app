@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+  <div class="min-h-screen overflow-x-clip bg-neutral-50 dark:bg-neutral-950">
     <div class="hidden md:fixed md:inset-y-0 md:left-0 md:block md:w-60">
       <AppSidebar @logout="handleLogout" />
     </div>
@@ -27,7 +27,9 @@
 
     <main class="md:pl-60">
       <div class="app-container py-5 sm:py-6">
-        <slot />
+        <div class="rounded-[1.25rem] bg-white/35 p-1 dark:bg-neutral-900/20 md:bg-transparent md:p-0">
+          <slot />
+        </div>
       </div>
     </main>
   </div>
