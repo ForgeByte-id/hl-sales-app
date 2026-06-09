@@ -9,7 +9,7 @@
     "preview": "nuxt preview",
     "test": "vitest run",
     "postinstall": "nuxt prepare",
-    "prepare": "husky install",
+    "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
@@ -37,9 +37,12 @@
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.111",
+    "@nuxt/eslint": "^1.15.2",
+    "@nuxt/eslint-config": "^1.15.2",
     "@types/node": "^25.9.2",
+    "eslint": "^10.4.1",
     "husky": "^8.0.0",
-    "lint-staged": "^15.2.2",
+    "lint-staged": "^15.5.2",
     "prettier": "^3.8.3",
     "shadcn-nuxt": "^2.7.4",
     "vitest": "^4.1.8"

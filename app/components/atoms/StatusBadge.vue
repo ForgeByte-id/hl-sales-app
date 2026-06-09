@@ -1,17 +1,25 @@
 <template>
-  <AppBadge :tone="status">
+  <AppBadge :tone="safeStatus">
     {{ label }}
   </AppBadge>
 </template>
 
 <script setup lang="ts">
+type StatusBadgeValue = "piutang" | "lunas" | "bonus";
+
 const props = defineProps<{
-  status: 'piutang' | 'lunas' | 'bonus'
-}>()
+  status: string;
+}>();
+
+const safeStatus = computed<StatusBadgeValue>(() => {
+  if (props.status === "lunas") return "lunas";
+  if (props.status === "bonus") return "bonus";
+  return "piutang";
+});
 
 const label = computed(() => {
-  if (props.status === 'piutang') return 'Piutang'
-  if (props.status === 'lunas') return 'Lunas'
-  return 'Bonus'
-})
+  if (safeStatus.value === "piutang") return "Piutang";
+  if (safeStatus.value === "lunas") return "Lunas";
+  return "Bonus";
+});
 </script>

@@ -1,17 +1,24 @@
 export function toNumber(value: number | string | null | undefined): number {
-  return Number(value ?? 0)
+  return Number(value ?? 0);
 }
 
 export function todayInputValue(): string {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function currentMonthValue(): string {
-  return new Date().toISOString().slice(0, 7)
+  return new Date().toISOString().slice(0, 7);
 }
 
-export function splitMonthValue(value: string): { year: number; month: number } {
-  const [year, month] = value.split('-').map(Number)
+export function splitMonthValue(value: string): {
+  year: number;
+  month: number;
+} {
+  const [rawYear, rawMonth] = value.split("-");
+  const now = new Date();
 
-  return { year, month }
+  const year = Number(rawYear) || now.getFullYear();
+  const month = Number(rawMonth) || now.getMonth() + 1;
+
+  return { year, month };
 }

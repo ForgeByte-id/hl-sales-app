@@ -14,7 +14,7 @@ function isNuxtViteNodeSocket(target) {
   return /[/\\]nuxt-vite-node-[^/\\]+[/\\]nuxt-vite-node-\d+-\d+\.sock$/.test(socketPath)
 }
 
-fs.chmodSync = function chmodSyncWithNuxtViteNodeSocketGuard(target, mode) {
+fs.chmodSync = function chmodSyncWithNuxtViteNodeSocketGuard(target) {
   try {
     return originalChmodSync.apply(this, arguments)
   } catch (error) {

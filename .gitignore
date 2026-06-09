@@ -24,3 +24,4 @@ logs
 .env.*
 !.env.example
 !.env.local.example
+repomix-output*.xml
