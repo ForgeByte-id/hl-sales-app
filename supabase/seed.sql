@@ -6,6 +6,7 @@ declare
   seed_password text := 'change-me-12345';
   seed_name text := 'Pemilik';
   seed_user_id uuid;
+  seed_identity_id uuid;
   identity_data jsonb;
   identity_has_provider_id boolean;
   identity_id_type text;
@@ -72,6 +73,7 @@ begin
     'email_verified', true,
     'phone_verified', false
   );
+  seed_identity_id := extensions.gen_random_uuid();
 
   delete from auth.identities
   where user_id = seed_user_id
@@ -98,24 +100,24 @@ begin
       execute
         'insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
          values ($1::uuid, $2, $3, $4, $5, now(), now(), now())'
-      using seed_user_id::text, seed_user_id, seed_user_id::text, identity_data, 'email';
+      using seed_identity_id::text, seed_user_id, seed_email, identity_data, 'email';
     else
       execute
         'insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
          values ($1::text, $2, $3, $4, $5, now(), now(), now())'
-      using seed_user_id::text, seed_user_id, seed_user_id::text, identity_data, 'email';
+      using seed_identity_id::text, seed_user_id, seed_email, identity_data, 'email';
     end if;
   else
     if identity_id_type = 'uuid' then
       execute
         'insert into auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
          values ($1::uuid, $2, $3, $4, now(), now(), now())'
-      using seed_user_id::text, seed_user_id, identity_data, 'email';
+      using seed_identity_id::text, seed_user_id, identity_data, 'email';
     else
       execute
         'insert into auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
          values ($1::text, $2, $3, $4, now(), now(), now())'
-      using seed_user_id::text, seed_user_id, identity_data, 'email';
+      using seed_identity_id::text, seed_user_id, identity_data, 'email';
     end if;
   end if;
 
