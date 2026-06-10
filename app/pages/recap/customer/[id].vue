@@ -22,6 +22,44 @@
       </SectionPanel>
 
       <DashboardSummaryGrid :metrics="summaryCards" />
+
+      <SectionPanel title="Bon Bonus">
+        <EmptyState
+          v-if="bonusTransactions.length === 0"
+          title="Belum ada Bon Bonus"
+          description="Bon Bonus pada periode ini akan muncul di sini."
+          icon="lucide:gift"
+        />
+        <div v-else class="overflow-x-auto">
+          <table
+            class="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800"
+          >
+            <thead
+              class="text-left text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+            >
+              <tr>
+                <th class="px-3 py-2">Tanggal</th>
+                <th class="px-3 py-2">Nomor Bon</th>
+                <th class="px-3 py-2 text-right">Jumlah Bonus</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+              <tr
+                v-for="transaction in bonusTransactions"
+                :key="transaction.id"
+              >
+                <td class="px-3 py-3">{{ formatDate(transaction.tanggal) }}</td>
+                <td class="px-3 py-3 font-medium">
+                  {{ transaction.nomor_bon }}
+                </td>
+                <td class="px-3 py-3 text-right font-mono">
+                  {{ transaction.bonus_units }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </SectionPanel>
     </div>
   </AppShell>
 </template>
@@ -46,6 +84,7 @@ const { data } = await useAsyncData(
         .from("transactions")
         .select("*, transaction_lines(*)")
         .eq("customer_id", customerId)
+        .is("deleted_at", null)
         .order("tanggal", { ascending: false }),
     ]);
 
@@ -60,59 +99,11 @@ const { data } = await useAsyncData(
 );
 
 const customer = computed(() => data.value?.customer);
-const filtered = computed(() => {
-  const { year, month } = splitMonthValue(period.value);
-  return (data.value?.transactions ?? []).filter((transaction) => {
-    const date = new Date(transaction.tanggal);
-    return (
-      date.getFullYear() === year &&
-      date.getMonth() + 1 === month &&
-      !transaction.is_bonus
-    );
-  });
-});
-
-function omzet(transaction: {
-  transaction_lines?: Array<{ line_omzet: number | string }>;
-}) {
-  return (transaction.transaction_lines ?? []).reduce(
-    (total, line) => total + toNumber(line.line_omzet),
-    0,
-  );
-}
-
-function profit(transaction: {
-  transaction_lines?: Array<{ line_laba_hl: number | string }>;
-}) {
-  return (transaction.transaction_lines ?? []).reduce(
-    (total, line) => total + toNumber(line.line_laba_hl),
-    0,
-  );
-}
-
-const summary = computed(() => {
-  const paid = filtered.value.filter(
-    (transaction) => transaction.status === "lunas",
-  );
-  const receivable = filtered.value.filter(
-    (transaction) => transaction.status === "piutang",
-  );
-
-  return {
-    omzet: paid.reduce((total, transaction) => total + omzet(transaction), 0),
-    laba: paid.reduce((total, transaction) => total + profit(transaction), 0),
-    piutang: receivable.reduce(
-      (total, transaction) =>
-        total + omzet(transaction) + toNumber(transaction.ongkir),
-      0,
-    ),
-    paid: paid.reduce(
-      (total, transaction) =>
-        total + omzet(transaction) + toNumber(transaction.ongkir),
-      0,
-    ),
-  };
-});
+const filtered = computed(() =>
+  filterTransactionsByMonth(data.value?.transactions ?? [], period.value),
+);
+const bonusTransactions = computed(() => getBonusTransactions(filtered.value));
+const summary = computed(() => summarizeTransactions(filtered.value));
 
 const summaryCards = computed(() => [
   {
@@ -142,9 +133,17 @@ const summaryCards = computed(() => [
 ]);
 
 function exportReport() {
+  const bonusRows = bonusTransactions.value
+    .map(
+      (transaction) =>
+        `<tr><td>${formatDate(transaction.tanggal)}</td><td>${transaction.nomor_bon}</td><td class="right">${transaction.bonus_units}</td></tr>`,
+    )
+    .join("");
+
   exportHtml(
     `HL - Rekap ${customer.value?.nama || "Pelanggan"}`,
-    `<h1>HL - Rekap ${customer.value?.nama || "Pelanggan"}</h1><p>Periode ${period.value}</p><table><tbody><tr><th>Omzet Lunas</th><td class="right">${formatRp(summary.value.omzet)}</td></tr><tr><th>Laba HL</th><td class="right">${formatRp(summary.value.laba)}</td></tr><tr><th>Piutang</th><td class="right">${formatRp(summary.value.piutang)}</td></tr><tr><th>Sudah Dibayar</th><td class="right">${formatRp(summary.value.paid)}</td></tr></tbody></table>`,
+    `<p>Periode ${period.value}</p><table><tbody><tr><th>Omzet Lunas</th><td class="right">${formatRp(summary.value.omzet)}</td></tr><tr><th>Laba HL</th><td class="right">${formatRp(summary.value.laba)}</td></tr><tr><th>Piutang</th><td class="right">${formatRp(summary.value.piutang)}</td></tr><tr><th>Sudah Dibayar</th><td class="right">${formatRp(summary.value.paid)}</td></tr></tbody></table><h2>Bon Bonus</h2><table><thead><tr><th>Tanggal</th><th>Nomor Bon</th><th class="right">Jumlah Bonus</th></tr></thead><tbody>${bonusRows || '<tr><td colspan="3">Belum ada Bon Bonus</td></tr>'}</tbody></table>`,
+    `HL-rekap-${filenamePart(customer.value?.nama || "pelanggan")}-${period.value}.pdf`,
   );
 }
 </script>

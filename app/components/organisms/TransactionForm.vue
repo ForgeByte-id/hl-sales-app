@@ -67,6 +67,16 @@
           <input v-model="form.is_bonus" type="checkbox" class="size-4" />
           <span>Bon Bonus</span>
         </label>
+        <p
+          v-if="form.is_bonus"
+          class="rounded-md border border-bonus-bg bg-bonus-bg px-3 py-2 text-sm leading-6 text-bonus-text dark:border-bonus-dark-bg dark:bg-bonus-dark-bg dark:text-bonus-dark-text md:col-span-2 lg:col-span-3"
+        >
+          Bon ini adalah Bon Bonus. Produk tidak dikenakan harga dan tidak
+          menambah omzet atau laba.
+          <span v-if="form.customer_id">
+            Jatah tersedia: {{ selectedBonusAvailable }}.
+          </span>
+        </p>
         <AppTextInput
           v-if="form.is_bonus"
           v-model="form.bonus_units"
@@ -240,6 +250,7 @@ const props = withDefaults(
     customers: Customer[];
     products: Product[];
     discountSteps: DiscountStep[];
+    bonusAvailableByCustomer?: Record<string, number>;
     initial?: {
       nomor_bon: string;
       tanggal: string;
@@ -247,12 +258,14 @@ const props = withDefaults(
       ongkir: number | string;
       deskripsi: string | null;
       is_bonus: boolean;
+      bonus_units?: number | string;
       status: string;
       lines: Array<{ product_id: string; qty: number | string }>;
     };
   }>(),
   {
     transactionId: null,
+    bonusAvailableByCustomer: () => ({}),
     initial: () => ({
       nomor_bon: "",
       tanggal: todayInputValue(),
@@ -306,7 +319,7 @@ const form = reactive<{
   ongkir: String(props.initial.ongkir),
   deskripsi: props.initial.deskripsi ?? "",
   is_bonus: props.initial.is_bonus,
-  bonus_units: "1",
+  bonus_units: String(props.initial.bonus_units ?? 1),
   status: normalizeTransactionStatus(props.initial.status),
 });
 
@@ -345,6 +358,10 @@ const productOptions = computed(() =>
     value: product.id,
     label: `${product.nama} - ${product.tipe}`,
   })),
+);
+
+const selectedBonusAvailable = computed(
+  () => props.bonusAvailableByCustomer[form.customer_id] ?? 0,
 );
 
 function selectedLineInputs(): TransactionLineInput[] {
@@ -461,6 +478,13 @@ function validateFields() {
     fieldErrors.customer_id = "Pilih pelanggan terlebih dahulu.";
   if (form.is_bonus && Number(form.bonus_units) < 1)
     fieldErrors.bonus_units = "Jumlah bonus minimal 1.";
+  if (
+    form.is_bonus &&
+    form.customer_id &&
+    Number(form.bonus_units) > selectedBonusAvailable.value
+  ) {
+    fieldErrors.bonus_units = "Jumlah bonus melebihi jatah tersedia.";
+  }
 
   lines.value.forEach((line, index) => {
     if (!line.product_id)

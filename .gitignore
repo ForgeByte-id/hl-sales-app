@@ -25,3 +25,6 @@ logs
 !.env.example
 !.env.local.example
 repomix-output*.xml
+
+# Supabase local CLI state
+supabase/.temp/

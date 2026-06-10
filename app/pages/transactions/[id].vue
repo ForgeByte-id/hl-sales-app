@@ -20,7 +20,7 @@
             >Edit</AppButton
           >
           <AppButton
-            v-if="transaction.status === 'piutang'"
+            v-if="transaction.status === 'piutang' && !transaction.is_bonus"
             icon="lucide:check"
             @click="settleDialogOpen = true"
             >Lunas</AppButton
@@ -168,6 +168,7 @@ const { data: transaction, refresh } = await useAsyncData(
       .from("transactions")
       .select("*, customers(nama), transaction_lines(*, products(nama))")
       .eq("id", transactionId)
+      .is("deleted_at", null)
       .single();
 
     if (error) throw error;
@@ -219,14 +220,13 @@ const summaryCards = computed(() => [
 
 async function settle() {
   settling.value = true;
-  const { error } = await supabase
-    .from("transactions")
-    .update({ status: "lunas", tanggal_lunas: settleDate.value })
-    .eq("id", transactionId)
-    .eq("is_bonus", false);
+  const { data: settled, error } = await supabase.rpc("settle_transaction", {
+    p_transaction_id: transactionId,
+    p_tanggal_lunas: settleDate.value,
+  });
   settling.value = false;
 
-  if (error) {
+  if (error || !settled) {
     toast.error("Bon belum bisa dilunasi.");
     return;
   }
@@ -247,7 +247,7 @@ function exportDetail() {
   exportHtml(
     `HL - ${transaction.value?.nomor_bon || "Bon"}`,
     `<p>${transaction.value?.customers?.nama || ""}</p><table><thead><tr><th>Produk</th><th>Tipe</th><th class="right">Qty</th><th class="right">Harga</th><th class="right">Omzet</th></tr></thead><tbody>${rows}</tbody></table>`,
-    `HL-bon-${transaction.value?.nomor_bon || "bon"}.pdf`,
+    `HL-bon-${filenamePart(transaction.value?.nomor_bon || "bon")}.pdf`,
   );
 }
 </script>

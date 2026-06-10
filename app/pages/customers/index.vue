@@ -47,6 +47,7 @@
             >
               <tr>
                 <th class="px-3 py-2">Nama</th>
+                <th class="px-3 py-2 text-right">Bon Aktif</th>
                 <th class="px-3 py-2">Threshold Bonus</th>
                 <th class="px-3 py-2">Piutang</th>
                 <th class="px-3 py-2">Bonus</th>
@@ -59,6 +60,11 @@
                   class="px-3 py-3 font-medium text-neutral-900 dark:text-neutral-50"
                 >
                   {{ customer.nama }}
+                </td>
+                <td
+                  class="px-3 py-3 text-right font-mono text-neutral-600 dark:text-neutral-300"
+                >
+                  {{ activeBonByCustomer.get(customer.id) ?? 0 }}
                 </td>
                 <td class="px-3 py-3 text-neutral-600 dark:text-neutral-300">
                   {{ formatRp(toNumber(customer.bonus_threshold)) }}
@@ -133,6 +139,7 @@ const { data, pending, refresh } = await useAsyncData(
         .select(
           "id, customer_id, ongkir, status, is_bonus, transaction_lines(line_omzet)",
         )
+        .is("deleted_at", null)
         .order("tanggal", { ascending: false }),
     ]);
 
@@ -170,6 +177,20 @@ const receivableByCustomer = computed(() => {
       (map.get(transaction.customer_id) ?? 0) +
         omzet +
         toNumber(transaction.ongkir),
+    );
+  }
+
+  return map;
+});
+
+const activeBonByCustomer = computed(() => {
+  const map = new Map<string, number>();
+
+  for (const transaction of data.value?.transactions ?? []) {
+    if (transaction.status !== "piutang" || transaction.is_bonus) continue;
+    map.set(
+      transaction.customer_id,
+      (map.get(transaction.customer_id) ?? 0) + 1,
     );
   }
 

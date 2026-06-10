@@ -136,6 +136,7 @@ const { data: transactions, refresh } = await useAsyncData(
     const { data, error } = await supabase
       .from("transactions")
       .select("*, customers(nama), transaction_lines(line_omzet)")
+      .is("deleted_at", null)
       .order("tanggal", { ascending: false });
 
     if (error) throw error;
@@ -176,7 +177,9 @@ async function deleteTransaction(id: string) {
   });
   if (!confirmed) return;
 
-  const { error } = await supabase.from("transactions").delete().eq("id", id);
+  const { error } = await supabase.rpc("delete_transaction", {
+    p_transaction_id: id,
+  });
   if (error) {
     toast.error("Bon belum bisa dihapus.");
     return;

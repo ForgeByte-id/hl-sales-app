@@ -21,6 +21,7 @@
           v-model="form.nama"
           label="Nama"
           placeholder="Nama produk"
+          :error="fieldErrors.nama"
         />
         <label class="block">
           <span
@@ -39,12 +40,14 @@
           v-model="form.harga_base"
           label="Harga Base"
           placeholder="0"
+          :error="fieldErrors.harga_base"
         />
         <AppTextInput
           v-model="form.harga_modal"
           label="Harga Modal"
           placeholder="0"
           helper="Hanya untuk perhitungan internal."
+          :error="fieldErrors.harga_modal"
         />
       </div>
     </SectionPanel>
@@ -99,6 +102,7 @@ const emit = defineEmits<{
 
 const saving = ref(false);
 const message = ref("");
+const fieldErrors = reactive<Record<string, string>>({});
 
 const form = reactive<{
   nama: string;
@@ -114,9 +118,24 @@ const form = reactive<{
 
 async function handleSubmit() {
   message.value = "";
+  fieldErrors.nama = "";
+  fieldErrors.harga_base = "";
+  fieldErrors.harga_modal = "";
 
   if (!form.nama.trim()) {
-    message.value = "Nama wajib diisi.";
+    fieldErrors.nama = "Nama wajib diisi.";
+  }
+
+  if (form.harga_base.trim().startsWith("-")) {
+    fieldErrors.harga_base = "Harga Base tidak boleh minus.";
+  }
+
+  if (form.harga_modal.trim().startsWith("-")) {
+    fieldErrors.harga_modal = "Harga Modal tidak boleh minus.";
+  }
+
+  if (Object.values(fieldErrors).some(Boolean)) {
+    message.value = "Periksa kembali data yang ditandai.";
     return;
   }
 

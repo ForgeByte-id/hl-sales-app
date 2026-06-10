@@ -38,7 +38,7 @@ export function usePdfExport() {
     document.body.append(style, target);
 
     try {
-      await html2pdf()
+      const worker = html2pdf()
         .from(target)
         .set({
           margin: [10, 10, 15, 10],
@@ -47,7 +47,28 @@ export function usePdfExport() {
           html2canvas: { scale: 2, useCORS: true },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })
-        .save();
+        .toPdf();
+
+      const pdf = await worker.get("pdf");
+      const totalPages = pdf.internal.getNumberOfPages();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      for (let page = 1; page <= totalPages; page += 1) {
+        pdf.setPage(page);
+        pdf.setFontSize(9);
+        pdf.setTextColor("#6b7280");
+        pdf.text(
+          `Halaman ${page} dari ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 7,
+          {
+            align: "center",
+          },
+        );
+      }
+
+      await worker.save();
     } finally {
       target.remove();
       style.remove();

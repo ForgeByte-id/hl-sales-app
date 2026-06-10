@@ -8,6 +8,7 @@
       :customers="customers"
       :products="products"
       :discount-steps="discountSteps"
+      :bonus-available-by-customer="bonusAvailableByCustomer"
       :initial="initial"
       @submit="updateTransaction"
     />
@@ -28,36 +29,50 @@ const transactionId = String(route.params.id);
 const { data } = await useAsyncData(
   `transaction-edit-${transactionId}`,
   async () => {
-    const [transactionResult, customersResult, productsResult, stepsResult] =
-      await Promise.all([
-        supabase
-          .from("transactions")
-          .select("*, transaction_lines(*)")
-          .eq("id", transactionId)
-          .single(),
-        supabase
-          .from("customers")
-          .select("*")
-          .is("deleted_at", null)
-          .order("nama"),
-        supabase
-          .from("products")
-          .select("*")
-          .is("deleted_at", null)
-          .order("nama"),
-        supabase.from("discount_steps").select("*").order("step_order"),
-      ]);
+    const [
+      transactionResult,
+      customersResult,
+      productsResult,
+      stepsResult,
+      transactionsResult,
+    ] = await Promise.all([
+      supabase
+        .from("transactions")
+        .select("*, transaction_lines(*)")
+        .eq("id", transactionId)
+        .is("deleted_at", null)
+        .single(),
+      supabase
+        .from("customers")
+        .select("*")
+        .is("deleted_at", null)
+        .order("nama"),
+      supabase
+        .from("products")
+        .select("*")
+        .is("deleted_at", null)
+        .order("nama"),
+      supabase.from("discount_steps").select("*").order("step_order"),
+      supabase
+        .from("transactions")
+        .select(
+          "id, customer_id, status, is_bonus, bonus_units, transaction_lines(line_omzet)",
+        )
+        .is("deleted_at", null),
+    ]);
 
     if (transactionResult.error) throw transactionResult.error;
     if (customersResult.error) throw customersResult.error;
     if (productsResult.error) throw productsResult.error;
     if (stepsResult.error) throw stepsResult.error;
+    if (transactionsResult.error) throw transactionsResult.error;
 
     return {
       transaction: transactionResult.data,
       customers: customersResult.data ?? [],
       products: productsResult.data ?? [],
       discountSteps: stepsResult.data ?? [],
+      transactions: transactionsResult.data ?? [],
     };
   },
 );
@@ -65,6 +80,40 @@ const { data } = await useAsyncData(
 const customers = computed(() => data.value?.customers ?? []);
 const products = computed(() => data.value?.products ?? []);
 const discountSteps = computed(() => data.value?.discountSteps ?? []);
+const bonusAvailableByCustomer = computed(() => {
+  const paid = new Map<string, number>();
+  const current = data.value?.transaction;
+
+  for (const transaction of data.value?.transactions ?? []) {
+    if (transaction.status !== "lunas" || transaction.is_bonus) continue;
+    const omzet = (transaction.transaction_lines ?? []).reduce(
+      (total, line) => total + toNumber(line.line_omzet),
+      0,
+    );
+    paid.set(
+      transaction.customer_id,
+      (paid.get(transaction.customer_id) ?? 0) + omzet,
+    );
+  }
+
+  return Object.fromEntries(
+    customers.value.map((customer) => {
+      const currentAllowance =
+        current?.is_bonus && current.customer_id === customer.id
+          ? toNumber(current.bonus_units)
+          : 0;
+
+      return [
+        customer.id,
+        calcBonusesAvailable(
+          paid.get(customer.id) ?? 0,
+          toNumber(customer.bonus_threshold),
+          toNumber(customer.bonuses_granted),
+        ) + currentAllowance,
+      ];
+    }),
+  );
+});
 const initial = computed(() => {
   const transaction = data.value?.transaction;
   if (!transaction) return null;
@@ -76,6 +125,7 @@ const initial = computed(() => {
     ongkir: transaction.ongkir,
     deskripsi: transaction.deskripsi,
     is_bonus: transaction.is_bonus,
+    bonus_units: transaction.bonus_units,
     status: transaction.status,
     lines: (transaction.transaction_lines ?? []).map((line) => ({
       product_id: line.product_id,

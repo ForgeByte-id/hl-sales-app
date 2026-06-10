@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5";
   };
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       customers: {
@@ -164,6 +189,13 @@ export type Database = {
             foreignKeyName: "transaction_lines_transaction_id_fkey";
             columns: ["transaction_id"];
             isOneToOne: false;
+            referencedRelation: "report_transaction_lines";
+            referencedColumns: ["transaction_id"];
+          },
+          {
+            foreignKeyName: "transaction_lines_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
             referencedRelation: "transactions";
             referencedColumns: ["id"];
           },
@@ -171,8 +203,10 @@ export type Database = {
       };
       transactions: {
         Row: {
+          bonus_units: number;
           created_at: string;
           customer_id: string;
+          deleted_at: string | null;
           deskripsi: string | null;
           id: string;
           is_bonus: boolean;
@@ -184,8 +218,10 @@ export type Database = {
           tanggal_lunas: string | null;
         };
         Insert: {
+          bonus_units?: number;
           created_at?: string;
           customer_id: string;
+          deleted_at?: string | null;
           deskripsi?: string | null;
           id?: string;
           is_bonus?: boolean;
@@ -197,8 +233,10 @@ export type Database = {
           tanggal_lunas?: string | null;
         };
         Update: {
+          bonus_units?: number;
           created_at?: string;
           customer_id?: string;
+          deleted_at?: string | null;
           deskripsi?: string | null;
           id?: string;
           is_bonus?: boolean;
@@ -221,22 +259,101 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      monthly_report_totals: {
+        Row: {
+          bon_lunas_count: number | null;
+          bon_piutang_count: number | null;
+          bulan: number | null;
+          customer_id: string | null;
+          customer_name: string | null;
+          laba_lunas: number | null;
+          omzet_bonus: number | null;
+          omzet_lunas: number | null;
+          omzet_piutang: number | null;
+          owner_uid: string | null;
+          product_type: string | null;
+          tahun: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      report_transaction_lines: {
+        Row: {
+          bonus_units: number | null;
+          bulan: number | null;
+          customer_id: string | null;
+          customer_name: string | null;
+          deleted_at: string | null;
+          discounted_price: number | null;
+          is_bonus: boolean | null;
+          line_id: string | null;
+          line_laba_hl: number | null;
+          line_omzet: number | null;
+          nomor_bon: string | null;
+          ongkir: number | null;
+          owner_uid: string | null;
+          product_id: string | null;
+          product_name: string | null;
+          product_type: string | null;
+          qty: number | null;
+          status: string | null;
+          tahun: number | null;
+          tanggal: string | null;
+          transaction_id: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transaction_lines_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
+      delete_transaction: {
+        Args: { p_transaction_id: string };
+        Returns: undefined;
+      };
+      save_customer: {
+        Args: {
+          p_bonus_threshold: number;
+          p_br_steps: number[];
+          p_customer_id: string;
+          p_lm_steps: number[];
+          p_nama: string;
+        };
+        Returns: string;
+      };
       save_transaction: {
         Args: {
           p_bonus_units: number;
           p_customer_id: string;
-          p_deskripsi: string | null;
+          p_deskripsi: string;
           p_is_bonus: boolean;
           p_lines: Json;
           p_nomor_bon: string;
           p_ongkir: number;
           p_status: string;
           p_tanggal: string;
-          p_tanggal_lunas: string | null;
-          p_transaction_id: string | null;
+          p_tanggal_lunas: string;
+          p_transaction_id: string;
         };
         Returns: string;
       };
@@ -248,6 +365,10 @@ export type Database = {
           p_year: number;
         };
         Returns: number;
+      };
+      settle_transaction: {
+        Args: { p_tanggal_lunas?: string; p_transaction_id: string };
+        Returns: boolean;
       };
     };
     Enums: {
@@ -380,6 +501,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

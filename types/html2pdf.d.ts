@@ -23,6 +23,25 @@ declare module "html2pdf.js" {
   interface Html2PdfWorker {
     from(element: HTMLElement): Html2PdfWorker;
     set(options: Html2PdfOptions): Html2PdfWorker;
+    toPdf(): Html2PdfWorker;
+    get(key: "pdf"): Promise<{
+      internal: {
+        getNumberOfPages(): number;
+        pageSize: {
+          getWidth(): number;
+          getHeight(): number;
+        };
+      };
+      setPage(page: number): void;
+      setFontSize(size: number): void;
+      setTextColor(color: string): void;
+      text(
+        text: string,
+        x: number,
+        y: number,
+        options?: { align?: "center" | "left" | "right" },
+      ): void;
+    }>;
     save(): Promise<void>;
   }
 

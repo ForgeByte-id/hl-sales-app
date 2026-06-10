@@ -246,6 +246,7 @@ const { data, refresh } = await useAsyncData(
         .from("transactions")
         .select("*, transaction_lines(*)")
         .eq("customer_id", customerId)
+        .is("deleted_at", null)
         .order("tanggal", { ascending: false }),
     ]);
 
@@ -409,14 +410,13 @@ async function confirmSettle() {
 
     toast.success(`${count ?? 0} bon berhasil dilunasi.`);
   } else {
-    const { error } = await supabase
-      .from("transactions")
-      .update({ status: "lunas", tanggal_lunas: settleDate.value })
-      .eq("id", settleDialog.transactionId)
-      .eq("is_bonus", false);
+    const { data: settled, error } = await supabase.rpc("settle_transaction", {
+      p_transaction_id: settleDialog.transactionId,
+      p_tanggal_lunas: settleDate.value,
+    });
 
     settling.value = false;
-    if (error) {
+    if (error || !settled) {
       toast.error("Bon belum bisa dilunasi.");
       return;
     }
@@ -439,7 +439,7 @@ function exportRows(rows: TransactionWithLines[], title: string) {
   exportHtml(
     title,
     `<p>${customer.value?.nama || "Pelanggan"} - ${period.value}</p><table><thead><tr><th>Tanggal</th><th>Nomor Bon</th><th>Status</th><th class="right">Tagihan</th></tr></thead><tbody>${body}</tbody></table>`,
-    `HL-${title.toLowerCase().replace(/\s+/g, "-")}-${customer.value?.nama || "pelanggan"}-${period.value}.pdf`,
+    `HL-${filenamePart(title)}-${filenamePart(customer.value?.nama || "pelanggan")}-${period.value}.pdf`,
   );
 }
 

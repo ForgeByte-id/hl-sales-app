@@ -6,6 +6,7 @@
       :customers="customers"
       :products="products"
       :discount-steps="discountSteps"
+      :bonus-available-by-customer="bonusAvailableByCustomer"
       :initial="initial"
       @submit="createTransaction"
     />
@@ -23,26 +24,67 @@ const route = useRoute();
 const toast = useToast();
 
 const { data } = await useAsyncData("transaction-form-master", async () => {
-  const [customersResult, productsResult, stepsResult] = await Promise.all([
-    supabase.from("customers").select("*").is("deleted_at", null).order("nama"),
-    supabase.from("products").select("*").is("deleted_at", null).order("nama"),
-    supabase.from("discount_steps").select("*").order("step_order"),
-  ]);
+  const [customersResult, productsResult, stepsResult, transactionsResult] =
+    await Promise.all([
+      supabase
+        .from("customers")
+        .select("*")
+        .is("deleted_at", null)
+        .order("nama"),
+      supabase
+        .from("products")
+        .select("*")
+        .is("deleted_at", null)
+        .order("nama"),
+      supabase.from("discount_steps").select("*").order("step_order"),
+      supabase
+        .from("transactions")
+        .select("customer_id, status, is_bonus, transaction_lines(line_omzet)")
+        .is("deleted_at", null),
+    ]);
 
   if (customersResult.error) throw customersResult.error;
   if (productsResult.error) throw productsResult.error;
   if (stepsResult.error) throw stepsResult.error;
+  if (transactionsResult.error) throw transactionsResult.error;
 
   return {
     customers: customersResult.data ?? [],
     products: productsResult.data ?? [],
     discountSteps: stepsResult.data ?? [],
+    transactions: transactionsResult.data ?? [],
   };
 });
 
 const customers = computed(() => data.value?.customers ?? []);
 const products = computed(() => data.value?.products ?? []);
 const discountSteps = computed(() => data.value?.discountSteps ?? []);
+const bonusAvailableByCustomer = computed(() => {
+  const paid = new Map<string, number>();
+
+  for (const transaction of data.value?.transactions ?? []) {
+    if (transaction.status !== "lunas" || transaction.is_bonus) continue;
+    const omzet = (transaction.transaction_lines ?? []).reduce(
+      (total, line) => total + toNumber(line.line_omzet),
+      0,
+    );
+    paid.set(
+      transaction.customer_id,
+      (paid.get(transaction.customer_id) ?? 0) + omzet,
+    );
+  }
+
+  return Object.fromEntries(
+    customers.value.map((customer) => [
+      customer.id,
+      calcBonusesAvailable(
+        paid.get(customer.id) ?? 0,
+        toNumber(customer.bonus_threshold),
+        toNumber(customer.bonuses_granted),
+      ),
+    ]),
+  );
+});
 const initial = computed(() => ({
   nomor_bon: "",
   tanggal: todayInputValue(),
@@ -51,6 +93,7 @@ const initial = computed(() => ({
   ongkir: 0,
   deskripsi: "",
   is_bonus: route.query.bonus === "1",
+  bonus_units: 1,
   status: "piutang",
   lines: [{ product_id: "", qty: 1 }],
 }));
