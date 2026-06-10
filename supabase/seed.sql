@@ -82,6 +82,7 @@ begin
 
     update auth.users
     set
+      encrypted_password = crypt(seed_password, gen_salt('bf')),
       email_confirmed_at = coalesce(email_confirmed_at, now()),
       raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"provider":"email","providers":["email"]}'::jsonb,
       raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('name', seed_name),
@@ -90,9 +91,8 @@ begin
   end if;
 
   -- ============================================================
-  -- 2. ENSURE AUTH IDENTITY
-  --    Jika identity email belum ada, buat.
-  --    Jika sudah ada, biarkan.
+  -- 2. CREATE AUTH IDENTITY
+  --    Hard delete existing identity, lalu create fresh.
   -- ============================================================
   identity_data := jsonb_build_object(
     'sub', seed_user_id::text,
@@ -100,6 +100,12 @@ begin
     'email_verified', true,
     'phone_verified', false
   );
+
+  delete from auth.identities
+  where user_id = seed_user_id
+    and provider = 'email';
+
+  seed_identity_id := extensions.gen_random_uuid();
 
   select exists (
     select 1
@@ -117,72 +123,63 @@ begin
     and table_name = 'identities'
     and column_name = 'id';
 
-  if not exists (
-    select 1
-    from auth.identities
-    where user_id = seed_user_id
-      and provider = 'email'
-  ) then
-    seed_identity_id := extensions.gen_random_uuid();
-
-    if identity_has_provider_id then
-      if identity_id_type = 'uuid' then
-        execute
-          'insert into auth.identities (
-            id,
-            user_id,
-            provider_id,
-            identity_data,
-            provider,
-            last_sign_in_at,
-            created_at,
-            updated_at
-          )
-          values ($1::uuid, $2, $3, $4, $5, now(), now(), now())'
-        using seed_identity_id::text, seed_user_id, lower(seed_email), identity_data, 'email';
-      else
-        execute
-          'insert into auth.identities (
-            id,
-            user_id,
-            provider_id,
-            identity_data,
-            provider,
-            last_sign_in_at,
-            created_at,
-            updated_at
-          )
-          values ($1::text, $2, $3, $4, $5, now(), now(), now())'
-        using seed_identity_id::text, seed_user_id, lower(seed_email), identity_data, 'email';
-      end if;
+  if identity_has_provider_id then
+    if identity_id_type = 'uuid' then
+      execute
+        'insert into auth.identities (
+          id,
+          user_id,
+          provider_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        values ($1::uuid, $2, $3, $4, $5, now(), now(), now())'
+      using seed_identity_id::text, seed_user_id, seed_email, identity_data, 'email';
     else
-      if identity_id_type = 'uuid' then
-        execute
-          'insert into auth.identities (
-            id,
-            user_id,
-            identity_data,
-            provider,
-            last_sign_in_at,
-            created_at,
-            updated_at
-          )
-          values ($1::uuid, $2, $3, $4, now(), now(), now())'
-        using seed_identity_id::text, seed_user_id, identity_data, 'email';
-      else
-        execute
-          'insert into auth.identities (
-            id,
-            user_id,
-            identity_data,
-            provider,
-            last_sign_in_at,
-            created_at,
-            updated_at
-          )
-          values ($1::text, $2, $3, $4, now(), now(), now())'
-        using seed_identity_id::text, seed_user_id, identity_data, 'email';
-      end if;
+      execute
+        'insert into auth.identities (
+          id,
+          user_id,
+          provider_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        values ($1::text, $2, $3, $4, $5, now(), now(), now())'
+      using seed_identity_id::text, seed_user_id, seed_email, identity_data, 'email';
+    end if;
+  else
+    if identity_id_type = 'uuid' then
+      execute
+        'insert into auth.identities (
+          id,
+          user_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        values ($1::uuid, $2, $3, $4, now(), now(), now())'
+      using seed_identity_id::text, seed_user_id, identity_data, 'email';
+    else
+      execute
+        'insert into auth.identities (
+          id,
+          user_id,
+          identity_data,
+          provider,
+          last_sign_in_at,
+          created_at,
+          updated_at
+        )
+        values ($1::text, $2, $3, $4, now(), now(), now())'
+      using seed_identity_id::text, seed_user_id, identity_data, 'email';
     end if;
   end if;
 
