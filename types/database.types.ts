@@ -335,7 +335,7 @@ export type Database = {
         Args: {
           p_bonus_threshold: number;
           p_br_steps: number[];
-          p_customer_id: string;
+          p_customer_id: string | null;
           p_lm_steps: number[];
           p_nama: string;
         };
@@ -345,15 +345,15 @@ export type Database = {
         Args: {
           p_bonus_units: number;
           p_customer_id: string;
-          p_deskripsi: string;
+          p_deskripsi: string | null;
           p_is_bonus: boolean;
           p_lines: Json;
           p_nomor_bon: string;
           p_ongkir: number;
           p_status: string;
           p_tanggal: string;
-          p_tanggal_lunas: string;
-          p_transaction_id: string;
+          p_tanggal_lunas: string | null;
+          p_transaction_id: string | null;
         };
         Returns: string;
       };
